@@ -1,0 +1,68 @@
+Асинхронное I/O
+Необходимые примитивы:
+1) Нотификация из Kernel Space в User Space.
+
+    a) [eventfd]
+    Системный вызов (создание файлового дескриптора):
+    fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    read, poll, select на этом fd блоикруются до тех пор, пока там ноль. 
+    Когда там не 0, read возвращает то, что там лежит, и сбрасывает в ноль. (данные 64 bit.)
+    [Read-clear -- стратегия]
+
+    Похоже на сигнальную переменную, но удобней.
+
+
+
+    Современная работа с этим примитивом: epoll() 
+    int epoll = epoll_create1(0);
+    Добавляем файловый дескриптор, на котором хотим ждать:
+    
+    создаём специальный дескриптор:
+    struct epoll_event ev;
+    memset(ev, 0, sizeof(ev));
+
+    ev.data.fd = fd;
+    ev.events = POLIN | POLLOUT:
+    ev.data.ptr = ctx; (при вычитывании  события получим контекст ctx (указатель на данные/callback)) -- очень удобно
+
+    epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &ev);
+
+    обратная операция
+
+    epoll_wait(epoll, 
+
+
+
+Непосредственно асихронное I|O
+
+-eaio в компиляторе gcc
+#include 
+
+io_context_t aio;
+системный вызов - (количество одновременно обрабатываемых запросов)
+io_setup(256, &aio);
+
+[в конце io_destroy]
+
+Передача данных:
+struct iocb io;
+
+Подготовка:
+io_prep_pread(&io, fd, buf, count, flags=0);
+
+
+Сюда можно запихать пачку операций!
+io_set_eventfd(&io, eventfd);
+io_submit(aio, 1, &io)
+[Не должен блокироваться! На самом деле враньё.]
+
+Последовательность:
+1) io_submit
+2) epoll_wait (или read на eventfd если один дексриптор)
+3) узнать, что случилось -- на каких iocb закончились операции I|O) io_getevents(aio, size, struct ioevent*, NULL)
+    
+
+epoll, eventfd -- всё надо закрыть через close()
+
+
+5 задача (прокси) на базе вот этого пишется гораздо проще.

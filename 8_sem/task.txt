@@ -1,0 +1,80 @@
+Когда ОС посылает сигналы процессам:
+7 раздел man signal
+
+1) SIGHUP
+посылается в момент, когда выходит процесс, контролировавший терминал, из которого вызван процесс
+
+Контрольный терминал -- устройство ввода-вывода. Он привязан к пачке процессов.
+Открытый терминал связан с файловым дескриптором стандартного ввода/вывода.
+
+Всем процессам посылается сигнал SIGHUP в момент закрытия контрольного терминала.
+
+По умолчанию все процессы умирают.
+
+Example: Xterm (при закрытии умирают все открытые внутри процессы).
+
+Изначально:
+терминал - дисплей с клавиатурой, подключенный к одному большому компьютеру (наряду с другими)
+
+Все процессы, привязанные к терминалу, образуют сеанс.
+
+SIGHUP получают все процесс в момент выхода лидера сеанса.
+(При "обрыве" линии все процессы, связанные с этим терминалом, умирают).
+
+Make yourself session leader:
+system call setsid() -- create session with number equal to pid of cur process.
+
+Special conventional use:
+
+There are processed runned permanently -- daemons. (Making process a daemon is quite a complicated procedure)
+libc call: daemon()
+1) Detach from terminal (so as not to be killed by SIGHUP)
+2) Switch current directory to /
+3) Close all file descripttors
+
+Reopen standart streams STDOUT|STDERR to /dev/null
+
+Process, daemonized in a right way, never get SIGHUP from OS, but can get it from USER to reload his config. A kind of convention)
+
+2) SIGINT
+Signal, sent by OS when tapped Ctrl - C
+3) SIGILL
+illegal instruction. In a CPU, exception is raised, then it switches to kernel mode to handle exception, and then returns to user space. (after that, instruction is runned again, but right before that signal is processed so that illegal instruction is not runned (process was killed before approaching to it))
+
+4) SIGABRT
+
+Signal is sent by process itself. (Usually in abort())
+
+5) SIGFPE
+Arithmetical errors like dividing by zero.
+
+6) SIGKILL (can't be handled. In case process is in not in uninterruptible sleep, it will be killed anyway.)
+ a) Can be sent by process.
+ b) Can be sent by out of memory killer.
+
+ Every process is killed in case of OOM to unmount file systems.
+
+7) SIGSEGV
+
+Invalid memory reference. Impossible to translate virtual adress into physical. Simplest example: *(NULL) (dereferencing null pointer)
+
+
+long jumps: JAVA exceptions, implementations of cooperational multitasking (coroutines!)
+asynchronous I/O
+1) State machines with complex callbacks
+2) Seemingly usual code with asynchronous I/O like in Scheme
+
+8) SIGPIPE:
+no reader on pipe when writing
+9) SIGALRM:
+signal sent as a result of calling alarm(int time)
+10) SIGTERM:
+accurately stop the process. 
+11) SIGUSR1, SIGUSR2
+never sent by OS, used by users (default behaviour is to die!)
+12) SIGCHLD:
+sent to parent when child terminates
+13) SIGCONT, SIGSTOP
+can't be cathed, block process (stop it) / continue if stopped
+SIGCONT is called before kill when leader of session terminates.
+
