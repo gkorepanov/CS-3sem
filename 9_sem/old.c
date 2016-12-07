@@ -20,28 +20,7 @@
 #include <sys/select.h>
 #include <fcntl.h>
 
-// [n] is [number of chilldren] 
-// [par] is [parent]
-// [ch] is [child]
 
-//==================================================================
-//                         PROJECT CONSTANTS
-//==================================================================
-
-typedef int fd_t;
-typedef char BYTE;
-typedef char bool;
-
-// some random values
-#define MAX_CHILDREN 1000
-#define MAX_BUFFER_SIZE 1e6
-#define PIPE_SIZE 65536
-#define BUF_CONST 4
-#define BASIS 3 
-
-// so as not to remember which end of pipe is read/write
-#define READ 0
-#define WRITE 1
 
 
 // connection struct
@@ -49,7 +28,7 @@ typedef struct conn_t {
     pid_t child_pid;
     fd_t par[2];
     fd_t ch[2];
-    size_t buf_size;
+    long long int buf_size;
     size_t pipe_size;
     BYTE* buf;
     ssize_t data;
@@ -74,7 +53,10 @@ void init_conn(conn_t* conn, size_t number, size_t n) {
 
 
     // buf_size = C 3^(n_i)
-    conn->buf_size = BUF_CONST * pow(BASIS, n-number);
+    if (n-number < 10)
+        conn->buf_size = BUF_CONST * pow(BASIS, n-number);
+    else
+        conn->buf_size = MAX_BUFFER_SIZE;
     if (conn->buf_size > MAX_BUFFER_SIZE) 
         conn->buf_size = MAX_BUFFER_SIZE;
 
@@ -344,29 +326,4 @@ void switch_mode(conn_t* conns, size_t n) {
 }
 
 int main(int argc, char** argv) {
-    if (argc != 3) 
-       ERR("Usage: %s [n] [filename]\n", argv[0])
     
-    fd_t fd;
-    ERRTEST(fd = open(argv[2], O_RDONLY))
-
-    long n = getnumber(argv[1]);
-    
-    conn_t* conns = calloc(n+1, sizeof(conn_t));
-
-    if (!conns) 
-        ERR("calloc() failed")
-
-    init_conns(conns, n, fd);
-    give_birth(conns, n);
-    remove_unused_fds(conns, n);
-    switch_mode(conns, n);
-
-    transfer(conns, n);
-
-    int i;
-    for (i = 0; i < n; i++) 
-        ERRTEST(waitpid(conns[i].child_pid, 0, 0))
-
-    destruct_conns(conns, n);
-}    
