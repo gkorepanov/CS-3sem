@@ -117,7 +117,7 @@ void init_conns(conn_t* conns, size_t n, fd_t fd) {
 
 void destruct_conns(conn_t* conns, size_t n) {
     int i;
-    for(i = 0; i < n; i++) {
+    for(i = 0; i <= n; i++) {
         free(conns[i].buf);
     }
     free(conns);
