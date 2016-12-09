@@ -1,13 +1,11 @@
-// In that file some macros for errors are defined
-
 #ifndef ALERTS_H
 #define ALERTS_H
 
-#include <sys/types.h>
-#include <unistd.h>
-#include <string.h>
-#include <errno.h>
-#include <stdlib.h>
+#include <errno.h>   // errno // guess why
+#include <stdlib.h>  // just because
+#include <string.h>  // strerror
+#include <stdio.h>   // fprintf
+#include <unistd.h>  // getpid
 
 #define RESET   "\033[0m"
 #define YELLOW    "\033[1m\033[33m"
