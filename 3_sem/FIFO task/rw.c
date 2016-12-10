@@ -221,7 +221,8 @@ void do_client() {
     if (read(client_fd, file_name, NAMESIZE) == -1) 
         ERR("ERROR reading filename from special FIFO, "\
                 "errno %s\n", strerror(errno))
-
+    
+            sleep(1);
 
     if (strlen(file_name) > 0) {
         strcat(file_name, ".out");

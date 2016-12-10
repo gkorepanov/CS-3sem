@@ -182,24 +182,26 @@ void transfer() {
     FD_ZERO(&writefds);
 
     // determine maxfd
-    size_t maxfd = 3; // MAX(STDERR, STDIN, STDOUT)
+    size_t nfds = 3; // MAX(STDERR, STDIN, STDOUT)
     FOR_EACH_NODE {
-        maxfd = MAX(maxfd, PAR.in);
-        maxfd = MAX(maxfd, PAR.out);
+        nfds = MAX(nfds, PAR.in);
+        nfds = MAX(nfds, PAR.out);
     }
+
+    nfds++;
     
+
     // initially all parnods are waiting for children to convey data
     FOR_EACH_NODE
         FD_SET(PAR.in, &readfds);
 
-
     // transferring info till all data is sent
-    while(parnods[LAST].on) {
+    while(parnods[LAST].on || (parnods[LAST].tail - parnods[LAST].head)) {
         mod_readfds = readfds;
         mod_writefds = writefds;
 
         // polling on pending fds
-        select(maxfd + 1, &mod_readfds, &mod_writefds, 0, 0);
+        ERRTEST(select(nfds, &mod_readfds, &mod_writefds, 0, 0));
 
         FOR_EACH_NODE {
             if (FD_ISSET(PAR.in, &mod_readfds))
@@ -212,20 +214,12 @@ void transfer() {
 
 void do_read(size_t NODE, fd_set* readfds, fd_set* writefds) {
     ssize_t bytes_read;
+
     ERRTEST(bytes_read = read(PAR.in, PAR.tail, PAR.end - PAR.tail));
     PAR.tail += bytes_read;
 
-
-#ifdef DEBUG
-        PRINT("Read data: ");
-        fflush(stdout);
-        write(STDOUT_FILENO, PAR.head, PAR.tail - PAR.head);
-        fflush(stdout);
-#endif
-
     // end of data
     if (!bytes_read) {
-        PRINT("CLOSING PAR.in number %zu", NODE);
         PAR.on = 0;
         close(PAR.in);
     }
@@ -238,13 +232,14 @@ void do_read(size_t NODE, fd_set* readfds, fd_set* writefds) {
 }
 
 void do_write(size_t NODE, fd_set* readfds, fd_set* writefds) {
-    ERRTEST(errno ? -1 : 0); // just to make sure evrth was ok
-    // (errno is checked beneath)
+    size_t bytes_write;
 
-    PAR.head += write(PAR.out, PAR.head, PAR.tail - PAR.head);
-    if (errno) ERR("write()");
+    ERRTEST(bytes_write = 
+                write(PAR.out, PAR.head, PAR.tail - PAR.head));
+    PAR.head += bytes_write;
 
     if (PAR.head == PAR.tail) { // everything written
+        PAR.head = PAR.tail = PAR.buf;
         FD_CLR(PAR.out, writefds);
 
         // closing connection if there will be no more data
@@ -280,31 +275,23 @@ void do_child(size_t MYNODE) {
     ERRTEST(errno ? -1 : 0); // just to make sure evrth was ok
     // (errno is checked beneath)
 
-
+    // TODO make this code beautiful after debug
     size_t bytes_read;
+    size_t bytes_write;
     while ((bytes_read = read(CH.in, buf, CHILD_BUF_SIZE))) {
         if (errno) ERR("read()");
+
         tail = buf + bytes_read;
 
-#ifdef DEBUG
-        PRINTCH("Read data: ")
-        fflush(stdout);
-        write(STDOUT_FILENO, buf, tail - head);
-        fflush(stdout);
-#endif
-
         // write entire data (the plainest algorithm)
-        while ((head += write(CH.out, head, tail - head)) != tail)
-            if (errno) ERR("write()");
-
-        PRINTCH("Written all data.");
+        while (head != tail) {
+            ERRTEST(bytes_write = write(CH.out, head, tail - head));
+            head += bytes_write;
+        }
 
         head = tail = buf;
     }
      
-    if (errno)
-        ERR("read()");
-
     ERRTEST(close(CH.in));
     ERRTEST(close(CH.out));
     free_structs(); 
