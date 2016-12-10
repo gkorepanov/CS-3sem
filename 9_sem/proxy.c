@@ -190,7 +190,6 @@ void transfer() {
 
     nfds++;
     
-
     // initially all parnods are waiting for children to convey data
     FOR_EACH_NODE
         FD_SET(PAR.in, &readfds);
@@ -272,22 +271,16 @@ void do_child(size_t MYNODE) {
         head =
             tail = (byte_t*) calloc(CHILD_BUF_SIZE, sizeof(byte_t));
 
-    ERRTEST(errno ? -1 : 0); // just to make sure evrth was ok
-    // (errno is checked beneath)
+    if (!buf)
+        ERR("calloc()");
 
-    // TODO make this code beautiful after debug
-    size_t bytes_read;
-    size_t bytes_write;
-    while ((bytes_read = read(CH.in, buf, CHILD_BUF_SIZE))) {
+
+    while ((tail += read(CH.in, buf, CHILD_BUF_SIZE)) != buf) {
         if (errno) ERR("read()");
 
-        tail = buf + bytes_read;
-
         // write entire data (the plainest algorithm)
-        while (head != tail) {
-            ERRTEST(bytes_write = write(CH.out, head, tail - head));
-            head += bytes_write;
-        }
+        while ((head += write(CH.out, head, tail - head)) != tail)
+            if (errno) ERR("write()");
 
         head = tail = buf;
     }
