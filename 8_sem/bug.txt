@@ -1,1 +1,1 @@
-I'm sent via signals!
+This reproduces an interesting feature. Running ./bug leads to system failure on Ubuntu 14-16.

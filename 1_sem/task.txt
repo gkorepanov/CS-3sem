@@ -1,0 +1,1 @@
+Input a string containing number safely.

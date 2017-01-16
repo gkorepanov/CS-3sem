@@ -1,0 +1,5 @@
+Create n children.
+And only after that make them write their numbers in the order they were born. 
+
+Use only message queues.
+

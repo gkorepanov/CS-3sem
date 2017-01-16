@@ -1,0 +1,4 @@
+1) Create n children.  
+2) This step is to create them in such a way that they are run in random order.
+3) Second step is to create them explicitly so that they are started in the order they are created.
+4) Write a program running the command specified as a arg.

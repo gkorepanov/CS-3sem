@@ -1,0 +1,2 @@
+answer.c: what happens when the given code is run
+fstat.c: how to determine that to fds refers to the same file.
